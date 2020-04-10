@@ -5,10 +5,13 @@
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import JSON
+from flask_migrate import Migrate
 import logging
+import sys
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
@@ -19,9 +22,14 @@ from forms import *
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://postgres:AmmaNaana1!@@localhost:5432/fyyur'
 db = SQLAlchemy(app)
+migrate = Migrate(app,db) # to include migrate functionality
 
-# TODO: connect to a local postgresql database
+#app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# TODO: connect to a local postgresql database -- given sql info in config.py - done
+
 
 #----------------------------------------------------------------------------#
 # Models.
@@ -38,8 +46,13 @@ class Venue(db.Model):
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    genres = db.Column(JSON)
+    website = db.Column(db.String(500))
+    seeking_talent = db.Column(db.Boolean)
+    seeking_description = db.Column(db.String(1000))
+    ven_shows = db.relationship('Show',backref='shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if a venue is deleted 
 
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    # TODO: implement any missing fields, as a database migration using Flask-Migrate - done
 
 class Artist(db.Model):
     __tablename__ = 'Artist'
@@ -52,10 +65,20 @@ class Artist(db.Model):
     genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    website = db.Column(db.String(500))
+    seeking_venue = db.Column(db.Boolean)
+    seeking_description = db.Column(db.String(1000))
+    art_shows = db.relationship('Show',backref='shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if an artist is deleted 
 
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    # TODO: implement any missing fields, as a database migration using Flask-Migrate - done
 
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration - done
+
+class Show(db.Model):
+  __tablename__='Show'
+  venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), primary_key=True)
+  artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), primary_key=True)
+  start_time = db.Column(db.DateTime)
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -67,7 +90,7 @@ def format_datetime(value, format='medium'):
       format="EEEE MMMM, d, y 'at' h:mma"
   elif format == 'medium':
       format="EE MM, dd, y h:mma"
-  return babel.dates.format_datetime(date, format)
+  return babel.dates.format_datetime(date, format,locale='en')
 
 app.jinja_env.filters['datetime'] = format_datetime
 
@@ -219,15 +242,65 @@ def create_venue_form():
 
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
+
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
+  form = VenueForm(request.form)
+  error=False
+  seeking_talent=False
+  seeking_description=''
+  image_link=''
+  if form.validate():
+    print('form validated')
+    try:
+      if 'seeking_talent' in request.form:
+        seeking_talent = request.form['seeking_talent'] == 'y'
+        print('seeking_talent',seeking_talent)
+      if 'seeking_description' in request.form:
+        seeking_description = request.form['seeking_description']
+        print('seeking_description',seeking_description)
+        new_venue = Venue(
+                name=request.form['name'],
+                genres=request.form.getlist('genres'),
+                address=request.form['address'],
+                city=request.form['city'],
+                state=request.form['state'],
+                phone=request.form['phone'],
+                website=request.form['website'],
+                facebook_link=request.form['facebook_link'],
+                image_link=request.form['image_link'],
+                seeking_talent=seeking_talent,
+                seeking_description=seeking_description,
+            )
+        db.session.add(new_venue)
+        db.session.commit()
+    except:
+      print("its unfortinately error scenario :(")
+      db.session.rollback()
+      error=True
+      print(sys.exc_info())
+    finally:
+      db.session.close()
+      print('from finally',sys.exc_info())
+      print('in finally')
+  else:
+    error=True
+    print("form validation failed",form.errors)
+      
+  if not error:
+      #return body
+      flash('Venue ' + request.form['name'] + ' was successfully listed!')
+  else:
+      print("error")
+      flash('An error occurred. Venue ' + request.form['name']  + ' could not be listed.')
+      #abort(400)
+  return render_template('pages/home.html')
 
   # on successful db insert, flash success
-  flash('Venue ' + request.form['name'] + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+  # e.g., 
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
-  return render_template('pages/home.html')
+  
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
