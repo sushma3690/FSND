@@ -14,6 +14,7 @@ import logging
 import sys
 from logging import Formatter, FileHandler
 from flask_wtf import Form
+from sqlalchemy import exc
 from forms import *
 #----------------------------------------------------------------------------#
 # App Config.
@@ -34,7 +35,6 @@ migrate = Migrate(app,db) # to include migrate functionality
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
-
 class Venue(db.Model):
     __tablename__ = 'Venue'
 
@@ -44,13 +44,14 @@ class Venue(db.Model):
     state = db.Column(db.String(120))
     address = db.Column(db.String(120))
     phone = db.Column(db.String(120))
+
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     genres = db.Column(JSON)
     website = db.Column(db.String(500))
     seeking_talent = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(1000))
-    ven_shows = db.relationship('Show',backref='shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if a venue is deleted 
+    ven_shows = db.relationship('Show',backref='ven_shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if a venue is deleted 
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate - done
 
@@ -68,7 +69,7 @@ class Artist(db.Model):
     website = db.Column(db.String(500))
     seeking_venue = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(1000))
-    art_shows = db.relationship('Show',backref='shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if an artist is deleted 
+    art_shows = db.relationship('Show',backref='art_shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if an artist is deleted 
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate - done
 
@@ -250,6 +251,7 @@ def create_venue_submission():
   seeking_talent=False
   seeking_description=''
   image_link=''
+  website=''
   if form.validate():
     print('form validated')
     try:
@@ -259,23 +261,27 @@ def create_venue_submission():
       if 'seeking_description' in request.form:
         seeking_description = request.form['seeking_description']
         print('seeking_description',seeking_description)
-        new_venue = Venue(
-                name=request.form['name'],
-                genres=request.form.getlist('genres'),
-                address=request.form['address'],
-                city=request.form['city'],
-                state=request.form['state'],
-                phone=request.form['phone'],
-                website=request.form['website'],
-                facebook_link=request.form['facebook_link'],
-                image_link=request.form['image_link'],
-                seeking_talent=seeking_talent,
-                seeking_description=seeking_description,
+      if 'website' in request.form:
+        website = request.form['website']
+      if 'image_link' in request.form:
+        image_link = request.form['image_link']
+      new_venue = Venue(
+        name=request.form['name'],
+        genres=request.form.getlist('genres'),
+        address=request.form['address'],
+        city=request.form['city'],
+        state=request.form['state'],
+        phone=request.form['phone'],
+        website=website,
+        facebook_link=request.form['facebook_link'],
+        image_link=image_link,
+        seeking_talent=seeking_talent,
+        seeking_description=seeking_description,
             )
-        db.session.add(new_venue)
-        db.session.commit()
-    except:
-      print("its unfortinately error scenario :(")
+      db.session.add(new_venue)
+      db.session.commit()
+    except exc.SQLAlchemyError as e:
+      print("its unfortinately error scenario :(", e)
       db.session.rollback()
       error=True
       print(sys.exc_info())
