@@ -43,12 +43,12 @@ class Venue(db.Model):
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
+    phone = db.Column(db.String(120),default='')
 
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
+    image_link = db.Column(db.String(500),default='')
+    facebook_link = db.Column(db.String(120), default='')
     genres = db.Column(JSON)
-    website = db.Column(db.String(500))
+    website = db.Column(db.String(500),default='')
     seeking_talent = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(1000))
     ven_shows = db.relationship('Show',backref='ven_shows',lazy=True,cascade="all, delete-orphan") #to delete all shows if a venue is deleted 
@@ -287,7 +287,6 @@ def create_venue_submission():
       print(sys.exc_info())
     finally:
       db.session.close()
-      print('from finally',sys.exc_info())
       print('in finally')
   else:
     error=True
