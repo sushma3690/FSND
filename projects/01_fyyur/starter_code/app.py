@@ -15,6 +15,7 @@ import sys
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from sqlalchemy import exc
+#import dictfier
 from forms import *
 #----------------------------------------------------------------------------#
 # App Config.
@@ -111,28 +112,48 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
-  return render_template('pages/venues.html', areas=data);
+  
+  # first step - lets get list of venues ordered by stae and city
+  venueslist = db.session.query(Venue).order_by('city','state').all()
+  data=[]
+  
+  #Initialize two variables cityPrev and staePrev , to keep track of when a new city and stae data starts coming
+  cityPrev = None
+  statePrev = None
+
+  #venuesbycityareadict  -> dict for each city and state
+  venuesbycityareadict={}
+
+  #venues -> list of venues that belong to each city and state.
+  venues=[]
+
+  # iterate through above list
+  #populate the venuesbycityareadict only once - that is when we get new city and new state than the previouus value
+  #keep adding each venues details to venuesbycityareadict 
+  # Finally add venuesbycityareadict to venues list which gets set as a paramater of venuesbycityareadict
+  # At the end of each cycle of for loop, add the venuesbycityareadict to a list and pass it to GUI via render template
+  for venue in venueslist:
+   # print("first line",venue.city,venue.state)
+    ven={}
+    ven['id'] = venue.id
+    ven['name'] = venue.name
+    ven['num_upcoming_shows'] = len([v for v in venue.ven_shows if venue.ven_shows.start_time > datetime.now()])
+   
+    if not cityPrev == venue.city or not statePrev == venue.state:
+      venuesbycityareadict={}
+      venues=[]
+      venuesbycityareadict['city'] = venue.city
+      venuesbycityareadict['state'] = venue.state
+      venuesbycityareadict['venues'] = venues
+    
+    venues.append(ven)
+   
+    if not venuesbycityareadict in data:
+      data.append(venuesbycityareadict)
+
+    cityPrev = venue.city
+    statePrev = venue.state
+  return render_template('pages/venues.html', areas=data)
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
