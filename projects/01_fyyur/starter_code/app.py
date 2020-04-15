@@ -159,99 +159,73 @@ def venues():
 def search_venues():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for Hop should return "The Musical Hop".
-  # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }
+  # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee" -done
+  
+  #search term
+  search_term=request.form.get('search_term', '')
+  # Query to get the list
+  respList = Venue.query.filter(Venue.name.ilike('%'+search_term+'%')).all()
+  #Initialize the main response as empty dict
+  response = {}
+  response['count'] = len(respList)
+  data = []
+  response['data']=data
+  # iterate and populate the required data
+  for resp in respList:
+    dat = {}
+    dat['id'] = resp.id
+    dat['name'] = resp.name
+    dat['num_upcoming_shows'] = len([v for v in resp.ven_shows if resp.ven_shows.start_time > datetime.now()])
+    data.append(dat)
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
-  # TODO: replace with real venue data from the venues table, using venue_id
-  data1={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-    "past_shows": [{
-      "artist_id": 4,
-      "artist_name": "Guns N Petals",
-      "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-      "start_time": "2019-05-21T21:30:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 0,
-  }
-  data2={
-    "id": 2,
-    "name": "The Dueling Pianos Bar",
-    "genres": ["Classical", "R&B", "Hip-Hop"],
-    "address": "335 Delancey Street",
-    "city": "New York",
-    "state": "NY",
-    "phone": "914-003-1132",
-    "website": "https://www.theduelingpianos.com",
-    "facebook_link": "https://www.facebook.com/theduelingpianos",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1497032205916-ac775f0649ae?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=750&q=80",
-    "past_shows": [],
-    "upcoming_shows": [],
-    "past_shows_count": 0,
-    "upcoming_shows_count": 0,
-  }
-  data3={
-    "id": 3,
-    "name": "Park Square Live Music & Coffee",
-    "genres": ["Rock n Roll", "Jazz", "Classical", "Folk"],
-    "address": "34 Whiskey Moore Ave",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "415-000-1234",
-    "website": "https://www.parksquarelivemusicandcoffee.com",
-    "facebook_link": "https://www.facebook.com/ParkSquareLiveMusicAndCoffee",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-    "past_shows": [{
-      "artist_id": 5,
-      "artist_name": "Matt Quevedo",
-      "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-      "start_time": "2019-06-15T23:00:00.000Z"
-    }],
-    "upcoming_shows": [{
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-01T20:00:00.000Z"
-    }, {
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-08T20:00:00.000Z"
-    }, {
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-15T20:00:00.000Z"
-    }],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 1,
-  }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+  # TODO: replace with real venue data from the venues table, using venue_id - done
+
+  #data list - final list we send to GUI
+  dataList = []
+  #First get the venue list
+  #Lopp through venue list and populate data accordingly 
+  # For shows and artists, first get shows for each venue and then get artist information for each show based on the artist_id column in show tabe 
+  #Populate artist data and show count based on the show start time into upcoming shows list or past shows list
+  # For Artists where there is no image lin, we dont want a shoddy image link to be shown with no actual image, so make corresponding css change for image in main.css 
+  #to now show anything when image source is empty
+  venueList = Venue.query.all()
+  for venue in venueList:
+    ven={}
+    for property, value in vars(venue).items():
+      if property != '_sa_instance_state':
+        ven[property]=value
+    
+    ven['past_shows']=[]
+    ven['upcoming_shows']=[]
+    past_shows_count=0
+    upcoming_shows_count=0
+    shows = venue.ven_shows
+    for show in venue.ven_shows:
+      artistbyid = Artist.query.get(show.artist_id)
+      artist={}
+      artist['start_time']=show.start_time
+      artist['artist_id']=artistbyid.id
+      artist['artist_name']=artistbyid.name
+      artist['artist_image_link']=None
+      if(show.start_time > datetime.now()):
+        past_shows_count = past_shows_count+1
+        ven['past_shows'].append(artist)
+      else:
+        upcoming_shows_count = upcoming_shows_count+1
+        ven['upcoming_shows'].append(artist)
+    ven['upcoming_shows_count'] = upcoming_shows_count
+    ven['past_shows_count'] = past_shows_count
+    dataList.append(ven)
+    print(" shows ",venue.ven_shows)
+    print('ven ',ven)
+  
+  print('dataList')
+  #print(dataList)
+  data = list(filter(lambda d: d['id'] == venue_id, dataList))[0]
   return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
